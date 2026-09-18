@@ -1,0 +1,10 @@
+yfinance
+python-dotenv
+apscheduler
+httpx
+pandas
+numpy
+scipy
+curl_cffi
+pydantic
+requests

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Form25 — Biotech Screener</title>
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="vendor/alpine.min.js" defer></script>
+  <style>
+    /* Design system carried over from dashboard/prototype.html: deep teal
+       ground, serif body, monospace reserved for figures, hairline rules
+       instead of cards, colour reserved for data. */
+    :root {
+      --base:   #0e1a1c;
+      --panel:  #132225;
+      --rule:   #1e3236;
+      --rule-2: #2a444a;
+
+      --ink:    #e6ece9;
+      --ink-2:  #9ab0ad;
+      --ink-3:  #6d8683;
+
+      --amber:  #f0a830;
+      --cyan:   #5fb3c4;
+      --up:     #48b07a;
+      --down:   #e2695f;
+
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    [x-cloak] { display: none !important; }
+
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--base);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+
+    /* Figures are monospaced and tabular so columns align; prose is not.
+       The display sizes are only ever used for readouts, so they carry the
+       mono treatment — except the regime word, which is a word. */
+    .font-mono, .tabular-nums, .text-2xl, .text-3xl, .fig {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      letter-spacing: -0.02em;
+    }
+    table td, table th { font-variant-numeric: tabular-nums; }
+    /* Right-aligned cells are always figures — keep the whole column in one
+       face so the decimal points line up down the table. */
+    table td.text-right { font-family: var(--mono); letter-spacing: -0.02em; }
+    .signal-green .text-3xl,
+    .signal-yellow .text-3xl,
+    .signal-red .text-3xl { font-family: var(--serif); letter-spacing: -0.01em; }
+
+    /* ---- surfaces: ruled panels, no radius, no shadow ---- */
+    .card, .card-sm {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 0;
+    }
+    .bg-gray-900 { background: #0f1e21; }
+    .bg-gray-800 { background: var(--rule); }
+    .bg-black\/70 { background: rgba(6, 14, 15, 0.78); }
+    .bg-blue-600, .bg-blue-500 { background: var(--amber); }
+
+    .border    { border: 1px solid var(--rule); }
+    .border-2  { border: 2px solid var(--rule-2); }
+    .border-t  { border-top: 1px solid var(--rule); }
+    .border-b  { border-bottom: 1px solid var(--rule); }
+    .border-gray-700 { border-color: var(--rule-2); }
+    .border-gray-800 { border-color: var(--rule); }
+    .border-green-700 { border-color: color-mix(in srgb, var(--up) 55%, var(--rule)); }
+    .border-red-800   { border-color: color-mix(in srgb, var(--down) 45%, var(--rule)); }
+
+    .rounded, .rounded-lg { border-radius: 0; }
+    .rounded-full { border-radius: 999px; }
+    .overflow-hidden { overflow: hidden; }
+
+    /* Masthead wordmark, after the prototype: one family, the qualifier
+       demoted by italic and colour rather than by a second typeface. */
+    .mark { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+    .mark i { font-style: italic; color: var(--ink-3); font-weight: 400; font-size: 17px; }
+
+    /* ---- navigation: underline, not a filled pill ---- */
+    .tab-active {
+      background: transparent; color: var(--ink);
+      border-bottom: 2px solid var(--amber); border-radius: 0;
+    }
+    .tab-inactive {
+      background: transparent; color: var(--ink-3);
+      border-bottom: 2px solid transparent; border-radius: 0;
+    }
+    .tab-inactive:hover { color: var(--ink-2); }
+
+    /* ---- regime banner: a rule and a colour, no gradient ---- */
+    .signal-green, .signal-yellow, .signal-red { background: var(--panel); }
+    .signal-green  { border-color: var(--up); }
+    .signal-yellow { border-color: var(--amber); }
+    .signal-red    { border-color: var(--down); }
+    .signal-green  .text-3xl { color: var(--up); }
+    .signal-yellow .text-3xl { color: var(--amber); }
+    .signal-red    .text-3xl { color: var(--down); }
+
+    .metric-up   { color: var(--up); }
+    .metric-down { color: var(--down); }
+    .metric-neut { color: var(--ink-2); }
+
+    /* ---- type scale ---- */
+    .text-\[10px\] { font-size: 10.5px; }
+    .text-xs  { font-size: 12.5px; }
+    .text-sm  { font-size: 14px; }
+    .text-lg  { font-size: 17px; }
+    .text-xl  { font-size: 20px; }
+    .text-2xl { font-size: 25px; }
+    .text-3xl { font-size: 32px; letter-spacing: -0.02em; }
+
+    .font-normal   { font-weight: 400; }
+    .font-medium   { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-bold     { font-weight: 600; }
+    .tracking-tight { letter-spacing: -0.015em; }
+    .leading-tight   { line-height: 1.2; }
+    .leading-relaxed { line-height: 1.6; }
+
+    .text-gray-200 { color: var(--ink); }
+    .text-gray-300 { color: var(--ink); }
+    .text-gray-400 { color: var(--ink-2); }
+    .text-gray-500 { color: var(--ink-3); }
+    .text-gray-600 { color: var(--ink-3); }
+    .text-blue-400 { color: var(--amber); }
+    .text-green-400, .text-green-300 { color: var(--up); }
+    .text-red-400, .text-red-300 { color: var(--down); }
+    .text-yellow-400 { color: var(--amber); }
+    .bg-green-900 { background: color-mix(in srgb, var(--up) 18%, transparent); }
+    .bg-red-900   { background: color-mix(in srgb, var(--down) 18%, transparent); }
+    .hover\:text-white:hover { color: var(--ink); }
+    .hover\:bg-gray-800\/50:hover { background: rgba(30, 50, 54, 0.5); }
+
+    .text-left { text-align: left; } .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .opacity-70 { opacity: .7; } .opacity-80 { opacity: .8; }
+
+    /* ---- layout primitives ---- */
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0,1fr)); }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .flex { display: flex; }
+    .flex-1 { flex: 1 1 0%; }
+    .flex-wrap { flex-wrap: wrap; }
+    .flex-shrink-0 { flex-shrink: 0; }
+    .items-center { align-items: center; }
+    .items-baseline { align-items: baseline; }
+    .items-stretch { align-items: stretch; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .fixed { position: fixed; } .inset-0 { inset: 0; } .z-50 { z-index: 50; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .max-w-7xl { max-width: 1180px; }
+    .max-w-lg { max-width: 34rem; }
+    .min-w-\[80px\] { min-width: 80px; }
+    .w-full { width: 100%; } .w-2 { width: .5rem; } .w-8 { width: 2rem; }
+    .w-14 { width: 3.5rem; }
+    .h-2 { height: .5rem; } .h-8 { height: 2rem; } .h-64 { height: 16rem; }
+    .cursor-pointer { cursor: pointer; }
+    .transition-colors, .transition-all { transition: color .15s, background-color .15s, border-color .15s; }
+
+    .gap-px { gap: 1px; } .gap-2 { gap: .5rem; } .gap-3 { gap: .75rem; } .gap-4 { gap: 1rem; }
+    .p-3 { padding: .75rem; } .p-4 { padding: 1rem; } .p-5 { padding: 1.25rem; } .p-6 { padding: 1.5rem; }
+    .px-1\.5 { padding-left:.375rem; padding-right:.375rem; }
+    .px-2 { padding-left:.5rem; padding-right:.5rem; }
+    .px-3 { padding-left:.75rem; padding-right:.75rem; }
+    .px-4 { padding-left:1rem; padding-right:1rem; }
+    .px-6 { padding-left:1.5rem; padding-right:1.5rem; }
+    .py-0\.5 { padding-top:.125rem; padding-bottom:.125rem; }
+    .py-1 { padding-top:.25rem; padding-bottom:.25rem; }
+    .py-1\.5 { padding-top:.375rem; padding-bottom:.375rem; }
+    .py-2 { padding-top:.5rem; padding-bottom:.5rem; }
+    .py-3 { padding-top:.75rem; padding-bottom:.75rem; }
+    .py-4 { padding-top:1rem; padding-bottom:1rem; }
+    .py-6 { padding-top:1.5rem; padding-bottom:1.5rem; }
+    .pb-2 { padding-bottom:.5rem; } .pt-4 { padding-top:1rem; }
+    .mb-1 { margin-bottom:.25rem; } .mb-2 { margin-bottom:.5rem; }
+    .mb-3 { margin-bottom:.75rem; } .mb-4 { margin-bottom:1rem; }
+    .mt-0\.5 { margin-top:.125rem; } .mt-1 { margin-top:.25rem; }
+    .mt-2 { margin-top:.5rem; } .mt-3 { margin-top:.75rem; } .mt-4 { margin-top:1rem; }
+    .ml-1 { margin-left:.25rem; } .ml-2 { margin-left:.5rem; }
+
+    .space-y-0\.5 > * + * { margin-top: .125rem; }
+    .space-y-1 > * + * { margin-top: .25rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .space-y-6 > * + * { margin-top: 1.5rem; }
+    .divide-y > * + * { border-top: 1px solid var(--rule); }
+    .divide-gray-800 > * + * { border-color: var(--rule); }
+
+    table { border-collapse: collapse; }
+
+    @media (min-width: 768px) {
+      .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+      .md\:col-span-2 { grid-column: span 2 / span 2; }
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--panel); }
+    ::-webkit-scrollbar-thumb { background: var(--rule-2); }
+    canvas { max-height: 280px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
+    }
+    :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  </style>
+</head>
+<body x-data="form25()" x-init="init()" x-cloak>
+
+  <!-- Header -->
+  <div class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-baseline gap-3">
+      <span class="mark">Form25 <i>biotech screener</i></span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-xs text-gray-500" x-text="'Updated ' + (data ? formatDate(data.generated_at) : '—')"></span>
+      <span class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400"
+            x-text="data?.macro?.as_of ?? '—'"></span>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="!data" class="flex items-center justify-center h-64">
+    <div class="text-gray-500 text-sm">Loading data.json…</div>
+  </div>
+
+  <!-- Main -->
+  <div x-show="data" class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+    <!-- Tab nav -->
+    <div class="flex gap-2">
+      <template x-for="(tab, i) in tabs" :key="i">
+        <button @click="activeTab = i"
+                :class="activeTab === i ? 'tab-active' : 'tab-inactive'"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          <span x-text="tab"></span>
+        </button>
+      </template>
+    </div>
+
+    <!-- ================================================================
+         TAB 0: NOW — Current conditions
+    ================================================================ -->
+    <div x-show="activeTab === 0" class="space-y-4">
+
+      <!-- Signal banner -->
+      <div class="card p-6 border-2"
+           :class="{
+             'signal-green':  data.macro.signal_color === 'green',
+             'signal-yellow': data.macro.signal_color === 'yellow',
+             'signal-red':    data.macro.signal_color === 'red'
+           }">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-3">
+              <span class="text-3xl font-bold" x-text="data.macro.signal"></span>
+              <span class="text-lg font-semibold" x-text="data.macro.signal_label"></span>
+            </div>
+            <p class="text-sm mt-1 opacity-80" x-text="data.macro.signal_detail"></p>
+          </div>
+          <div class="text-right text-sm opacity-70 space-y-1">
+            <div x-text="'Regime: ' + data.macro.macro_regime"></div>
+            <div x-text="'Yield curve: ' + data.macro.yield_curve"></div>
+            <div x-text="'Risk env: ' + data.macro.risk_env"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Macro metrics row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <template x-for="m in macroMetrics()" :key="m.label">
+          <div class="card-sm p-4">
+            <div class="text-xs text-gray-500 mb-1" x-text="m.label"></div>
+            <div class="text-2xl font-semibold" :class="m.color" x-text="m.value"></div>
+            <div class="text-xs text-gray-500 mt-1" x-text="m.sub"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Charts row: VIX + Yield spread -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <div class="text-sm font-medium text-gray-300 mb-3">VIX — Fear Index (1 year)</div>
+          <canvas id="vixChart"></canvas>
+        </div>
+        <div class="card p-4">
+          <div class="text-sm font-medium text-gray-300 mb-3">10Y-2Y Yield Spread (1 year)</div>
+          <canvas id="spreadChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================
+         TAB 1: EVIDENCE — Backtest results
+    ================================================================ -->
+    <div x-show="activeTab === 1" class="space-y-4">
+
+      <!-- Summary metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="card-sm p-4">
+          <div class="text-xs text-gray-500 mb-1">Period</div>
+          <div class="text-sm font-semibold" x-text="data.backtest.start_date + ' → ' + data.backtest.end_date"></div>
+        </div>
+        <div class="card-sm p-4">
+          <div class="text-xs text-gray-500 mb-1">Snapshots</div>
+          <div class="text-2xl font-semibold text-blue-400" x-text="fmt(data.backtest.total_snapshots)"></div>
+        </div>
+        <div class="card-sm p-4">
+          <div class="text-xs text-gray-500 mb-1">Pass Rate</div>
+          <div class="text-2xl font-semibold text-blue-400" x-text="data.backtest.pass_rate + '%'"></div>
+        </div>
+        <div class="card-sm p-4">
+          <div class="text-xs text-gray-500 mb-1">Universe</div>
+          <div class="text-2xl font-semibold text-blue-400" x-text="data.backtest.unique_tickers + ' tickers'"></div>
+        </div>
+      </div>
+
+      <!-- Permutation test results -->
+      <div class="card p-5">
+        <div class="text-sm font-semibold text-gray-200 mb-1">Permutation Test Results</div>
+        <div class="text-xs text-gray-500 mb-4">
+          H₀: screener performs no better than random selection — 10,000 permutations
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <template x-for="t in data.backtest.permutation_tests" :key="t.hold_days">
+            <div class="bg-gray-900 rounded-lg p-4 border"
+                 :class="t.significant ? 'border-green-700' : 'border-red-800'">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium" x-text="t.hold_days + '-day hold'"></span>
+                <span class="text-xs px-2 py-0.5 rounded"
+                      :class="t.significant ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'"
+                      x-text="t.significant ? '✓ SIGNIFICANT' : '✗ NOT SIG'"></span>
+              </div>
+              <div class="text-3xl font-bold text-green-400 mb-1"
+                   x-text="'+' + t.observed + '%'"></div>
+              <div class="text-xs text-gray-500 space-y-0.5">
+                <div x-text="'Null mean: +' + t.null_mean + '%'"></div>
+                <div x-text="'Effect: +' + t.effect + 'σ'"></div>
+                <div x-text="'p-value: ' + (t.p_value === 0 ? '< 0.0001' : t.p_value)"></div>
+                <div x-text="'95% CI: [+' + t.ci_lo + '%, +' + t.ci_hi + '%]'"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Survivorship correction. Sits inside the permutation card on
+             purpose: the headline is measured on companies that still trade,
+             and that qualifier belongs against the number, not a tab away. -->
+        <div class="mt-4 pt-4 border-t border-gray-800" x-show="hasSurvivorship()">
+          <div class="flex items-baseline justify-between mb-2">
+            <span class="text-xs text-gray-400">Measured on surviving companies only</span>
+            <span class="text-xs text-gray-600"
+                  x-text="data.survivorship.delisted + ' of ' + fmt(data.survivorship.scanned)
+                          + ' delisted in period (' + data.survivorship.attrition_pct + '%)'"></span>
+          </div>
+          <div class="flex items-stretch gap-px bg-gray-800 rounded overflow-hidden">
+            <template x-for="s in data.survivorship.sensitivity" :key="s.assumption">
+              <div class="flex-1 bg-gray-900 px-2 py-2">
+                <div class="text-[10px] text-gray-500 leading-tight mb-1" x-text="s.assumption"></div>
+                <div class="text-sm font-mono tabular-nums"
+                     :class="s.corrected_adj > 0 ? 'metric-up' : 'metric-down'"
+                     x-text="(s.corrected_adj > 0 ? '+' : '') + s.corrected_adj + '%'"></div>
+              </div>
+            </template>
+          </div>
+          <div class="text-xs text-gray-500 mt-2">
+            90-day alpha vs XBI after correcting for delisted companies, across
+            assumptions about what an acquisition returned. Most delistings here were
+            acquisitions, not failures.
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row: equity curve + regime bar -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <div class="text-sm font-medium text-gray-300 mb-1">Screener vs XBI — Monthly Returns</div>
+          <div class="text-xs text-gray-500 mb-3">Average 30d return of passed-filter stocks vs XBI</div>
+          <canvas id="equityChart"></canvas>
+        </div>
+        <div class="card p-4">
+          <div class="text-sm font-medium text-gray-300 mb-1">Performance by Macro Regime</div>
+          <div class="text-xs text-gray-500 mb-3">Mean 30-day return % of screener selections</div>
+          <canvas id="regimeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Price levels -->
+      <div class="card p-4">
+        <div class="text-sm font-medium text-gray-300 mb-1">Price vs 52-Week High</div>
+        <div class="text-xs text-gray-500 mb-3">Mean 30d return by drawdown bucket (elevated risk)</div>
+        <canvas id="priceLevelChart"></canvas>
+      </div>
+
+      <!-- Portfolio stats table -->
+      <div class="card p-5">
+        <div class="text-sm font-semibold text-gray-200 mb-4">Portfolio Performance by Hold Period</div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-gray-500 border-b border-gray-700">
+              <th class="text-left pb-2">Metric</th>
+              <template x-for="s in data.backtest.portfolio_stats" :key="s.hold_days">
+                <th class="text-right pb-2" x-text="s.hold_days + 'd'"></th>
+              </template>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <template x-for="row in portfolioRows()" :key="row.label">
+              <tr>
+                <td class="py-2 text-gray-400 text-xs" x-text="row.label"></td>
+                <template x-for="s in data.backtest.portfolio_stats" :key="s.hold_days">
+                  <td class="py-2 text-right font-mono text-xs"
+                      :class="row.color(s[row.key])"
+                      x-text="row.fmt(s[row.key])"></td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Elevated risk calendar -->
+      <div class="card p-5">
+        <div class="text-sm font-semibold text-gray-200 mb-1">Elevated Risk Days per Year</div>
+        <div class="text-xs text-gray-500 mb-4">Days when VIX > 25 or HY spread > 5% — when the screener has maximum edge</div>
+        <div class="flex gap-3 flex-wrap">
+          <template x-for="y in data.backtest.elevated_calendar" :key="y.year">
+            <div class="bg-gray-900 rounded-lg p-3 text-center min-w-[80px]">
+              <div class="text-xs text-gray-500" x-text="y.year"></div>
+              <div class="text-xl font-bold mt-1"
+                   :class="y.pct > 20 ? 'text-green-400' : y.pct > 10 ? 'text-yellow-400' : 'text-gray-400'"
+                   x-text="y.elevated_days"></div>
+              <div class="text-xs text-gray-600 mt-0.5" x-text="y.pct + '%'"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Delisting detail -->
+      <div class="card p-5" x-show="hasSurvivorship()">
+        <div class="text-sm font-semibold text-gray-200 mb-1">Companies That Left the Market</div>
+        <div class="text-xs text-gray-500 mb-4">
+          Price history exists only for companies still trading, so delisted names
+          never entered the backtest. These figures come from
+          <span x-text="data.survivorship.source"></span>.
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Why they left -->
+          <div>
+            <div class="text-xs text-gray-500 mb-2">Why they left</div>
+            <table class="w-full text-sm">
+              <tbody class="divide-y divide-gray-800">
+                <template x-for="r in reasonRows()" :key="r.label">
+                  <tr>
+                    <td class="py-1.5 text-gray-300" x-text="r.label"></td>
+                    <td class="py-1.5 text-right font-mono tabular-nums text-gray-400"
+                        x-text="r.n"></td>
+                    <td class="py-1.5 text-right font-mono tabular-nums w-14"
+                        :class="r.key === 'bankruptcy' ? 'metric-down' : 'metric-neut'"
+                        x-text="r.pct + '%'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Effect on the edge -->
+          <div class="md:col-span-2">
+            <div class="text-xs text-gray-500 mb-2">
+              90-day alpha vs XBI, corrected
+            </div>
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-xs text-gray-500">
+                  <th class="text-left font-normal pb-2">If an acquisition returned</th>
+                  <th class="text-right font-normal pb-2">Blended</th>
+                  <th class="text-right font-normal pb-2">Corrected</th>
+                  <th class="text-right font-normal pb-2">Filters credited</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <template x-for="s in data.survivorship.sensitivity" :key="s.assumption">
+                  <tr>
+                    <td class="py-1.5 text-gray-300" x-text="s.assumption"></td>
+                    <td class="py-1.5 text-right font-mono tabular-nums text-gray-500"
+                        x-text="s.blended + '%'"></td>
+                    <td class="py-1.5 text-right font-mono tabular-nums"
+                        :class="s.corrected > 0 ? 'metric-up' : 'metric-down'"
+                        x-text="(s.corrected > 0 ? '+' : '') + s.corrected + '%'"></td>
+                    <td class="py-1.5 text-right font-mono tabular-nums"
+                        :class="s.corrected_adj > 0 ? 'metric-up' : 'metric-down'"
+                        x-text="(s.corrected_adj > 0 ? '+' : '') + s.corrected_adj + '%'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div class="text-xs text-gray-500 mt-3 leading-relaxed">
+              Uncorrected 90-day alpha is
+              <span class="font-mono tabular-nums text-gray-300"
+                    x-text="(data.survivorship.observed_alpha > 0 ? '+' : '')
+                            + data.survivorship.observed_alpha + '%'"></span>.
+              The last column assumes the cash filters avoided failing companies at the
+              rate measured against a small sample, so treat it as the optimistic read.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shown when the delisting scan has not been run -->
+      <div class="card-sm p-4" x-show="data.survivorship && !hasSurvivorship()">
+        <div class="text-sm text-gray-300 mb-1">Survivorship correction unavailable</div>
+        <div class="text-xs text-gray-500">
+          The results above count only companies that still trade. Run
+          <span class="font-mono text-gray-400">python data/fetch_delistings.py</span>
+          to measure what the delisted ones would have cost.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================
+         TAB 2: UNIVERSE — Today's screener output
+    ================================================================ -->
+    <div x-show="activeTab === 2" class="space-y-4">
+
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold text-gray-200"
+               x-text="data.universe.passing_count + ' companies passing hard filters'"></div>
+          <div class="text-xs text-gray-500 mt-0.5" x-text="'As of ' + data.universe.as_of"></div>
+        </div>
+        <div class="text-xs text-gray-500">
+          Listed alphabetically — passing is binary, not ranked · Click a row for detail
+        </div>
+      </div>
+
+      <!-- Current regime reminder -->
+      <div class="card-sm p-3 flex items-center gap-3">
+        <div class="w-2 h-2 rounded-full flex-shrink-0"
+             :class="{
+               'bg-green-400':  data.macro.signal_color === 'green',
+               'bg-yellow-400': data.macro.signal_color === 'yellow',
+               'bg-red-400':    data.macro.signal_color === 'red'
+             }"></div>
+        <span class="text-xs text-gray-400">
+          Current regime: <span class="text-gray-200 font-medium" x-text="data.macro.risk_env"></span>
+          — <span x-text="data.macro.signal_detail"></span>
+        </span>
+      </div>
+
+      <!-- Ticker table -->
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-900">
+            <tr class="text-xs text-gray-500">
+              <th class="text-left px-4 py-3">Ticker</th>
+              <th class="text-right px-3 py-3">Mkt Cap</th>
+              <th class="text-right px-3 py-3">Cash Ratio</th>
+              <th class="text-right px-3 py-3">Runway</th>
+              <th class="text-right px-3 py-3">vs 52w High</th>
+              <th class="text-right px-3 py-3">Price</th>
+              <th class="text-right px-4 py-3">Quality</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <template x-for="t in data.universe.tickers" :key="t.ticker">
+              <tr class="hover:bg-gray-800/50 cursor-pointer transition-colors"
+                  @click="selectedTicker = t">
+                <td class="px-4 py-3">
+                  <span class="font-semibold text-blue-400" x-text="t.ticker"></span>
+                  <div class="text-xs text-gray-600" x-text="t.snapshot_date"></div>
+                </td>
+                <td class="px-3 py-3 text-right text-gray-300 font-mono text-xs"
+                    x-text="t.market_cap_m ? '$' + Math.round(t.market_cap_m) + 'M' : '—'"></td>
+                <td class="px-3 py-3 text-right font-mono text-xs"
+                    :class="t.cash_ratio > 0.5 ? 'text-green-400' : 'text-gray-400'"
+                    x-text="t.cash_ratio ? t.cash_ratio.toFixed(2) : '—'"></td>
+                <td class="px-3 py-3 text-right font-mono text-xs"
+                    :class="t.cash_runway_months > 18 ? 'text-green-400' : 'text-yellow-400'"
+                    x-text="t.cash_runway_months ? Math.round(t.cash_runway_months) + 'mo' : '—'"></td>
+                <td class="px-3 py-3 text-right font-mono text-xs"
+                    :class="t.vs_52w_high_pct < -50 ? 'text-green-400' : 'text-gray-400'"
+                    x-text="t.vs_52w_high_pct != null ? t.vs_52w_high_pct + '%' : '—'"></td>
+                <td class="px-3 py-3 text-right font-mono text-xs text-gray-300"
+                    x-text="t.price ? '$' + t.price.toFixed(2) : '—'"></td>
+                <td class="px-4 py-3 text-right">
+                  <span class="text-xs px-1.5 py-0.5 rounded"
+                        :class="{
+                          'bg-green-900 text-green-300':  t.data_quality === 'full',
+                          'bg-yellow-900 text-yellow-300': t.data_quality === 'partial',
+                          'bg-gray-800 text-gray-500':    t.data_quality === 'stub'
+                        }"
+                        x-text="t.data_quality"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div><!-- end main -->
+
+  <!-- Ticker detail modal -->
+  <div x-show="selectedTicker" x-cloak
+       class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+       @click.self="selectedTicker = null">
+    <div class="card w-full max-w-lg p-6 space-y-4" x-show="selectedTicker">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-2xl font-bold text-blue-400" x-text="selectedTicker?.ticker"></span>
+          <span class="text-sm text-gray-500 ml-2" x-text="selectedTicker?.snapshot_date"></span>
+        </div>
+        <button @click="selectedTicker = null" class="text-gray-500 hover:text-white text-xl">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <template x-for="m in tickerMetrics()" :key="m.label">
+          <div class="bg-gray-900 rounded-lg p-3">
+            <div class="text-xs text-gray-500" x-text="m.label"></div>
+            <div class="text-lg font-semibold mt-0.5" :class="m.color" x-text="m.value"></div>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script>
+  function form25() {
+    return {
+      data: null,
+      activeTab: 0,
+      tabs: ['Now', 'Evidence', 'Universe'],
+      selectedTicker: null,
+      charts: {},
+
+      async init() {
+        try {
+          const res = await fetch('./data.json');
+          this.data = await res.json();
+          this.$nextTick(() => this.buildCharts());
+        } catch(e) {
+          console.error('Failed to load data.json:', e);
+        }
+      },
+
+      formatDate(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleString('en-GB', {
+          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+        });
+      },
+
+      fmt(n) {
+        if (n == null) return '—';
+        return n.toLocaleString();
+      },
+
+      // True only when the delisting scan has run AND the backtest report
+      // carried an XBI alpha to correct. Without both, the dashboard says so
+      // rather than showing a correction built on missing inputs.
+      hasSurvivorship() {
+        const s = this.data?.survivorship;
+        return !!(s && s.sensitivity && s.sensitivity.length && s.observed_alpha != null);
+      },
+
+      reasonRows() {
+        const mix = this.data?.survivorship?.reason_mix;
+        if (!mix) return [];
+        const labels = {
+          acquisition_or_private: 'Acquired or taken private',
+          bankruptcy:             'Bankruptcy',
+          unknown:                'Reason not determined',
+        };
+        const total = Object.values(mix).reduce((a, b) => a + b, 0) || 1;
+        return Object.entries(mix)
+          .sort((a, b) => b[1] - a[1])
+          .map(([key, n]) => ({
+            key,
+            label: labels[key] || key,
+            n,
+            pct: Math.round((n / total) * 1000) / 10,
+          }));
+      },
+
+      macroMetrics() {
+        const m = this.data?.macro;
+        if (!m) return [];
+        const vix = m.vix;
+        const hy  = m.hy_spread;
+        return [
+          {
+            label: 'VIX',
+            value: vix != null ? vix.toFixed(1) : '—',
+            color: vix > 25 ? 'metric-up' : vix > 15 ? 'text-yellow-400' : 'metric-neut',
+            sub: vix > 25 ? '▲ Elevated fear' : vix > 15 ? 'Moderate' : 'Low volatility'
+          },
+          {
+            label: 'HY Spread',
+            value: hy != null ? hy.toFixed(2) + '%' : '—',
+            color: hy > 5 ? 'metric-up' : hy > 3.5 ? 'text-yellow-400' : 'metric-neut',
+            sub: hy > 5 ? '▲ Credit stress' : hy > 3.5 ? 'Moderate' : 'Calm credit'
+          },
+          {
+            label: 'Fed Funds',
+            value: m.fed_funds != null ? m.fed_funds.toFixed(2) + '%' : '—',
+            color: m.fed_funds > 4 ? 'metric-down' : m.fed_funds > 2 ? 'text-yellow-400' : 'metric-up',
+            sub: m.macro_regime
+          },
+          {
+            label: '10Y-2Y Spread',
+            value: m.yield_spread != null ? (m.yield_spread > 0 ? '+' : '') + m.yield_spread.toFixed(2) + '%' : '—',
+            color: m.yield_spread < -0.25 ? 'metric-down' : m.yield_spread < 0.25 ? 'text-yellow-400' : 'metric-up',
+            sub: m.yield_curve + ' curve'
+          },
+        ];
+      },
+
+      portfolioRows() {
+        return [
+          {
+            label: 'Mean return %',
+            key: 'mean_return',
+            fmt: v => v != null ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—',
+            color: v => v > 0 ? 'text-green-400' : 'text-red-400'
+          },
+          {
+            label: 'Median return %',
+            key: 'median_return',
+            fmt: v => v != null ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—',
+            color: v => v > 0 ? 'text-green-400' : 'text-red-400'
+          },
+          {
+            label: 'Win rate %',
+            key: 'win_rate',
+            fmt: v => v != null ? v.toFixed(1) + '%' : '—',
+            color: v => v > 50 ? 'text-green-400' : v > 45 ? 'text-yellow-400' : 'text-red-400'
+          },
+          {
+            label: 'Failed-filter mean %',
+            key: 'failed_mean',
+            fmt: v => v != null ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—',
+            color: v => 'text-gray-400'
+          },
+          {
+            label: 'N positions',
+            key: 'n',
+            fmt: v => v != null ? v.toLocaleString() : '—',
+            color: v => 'text-gray-300'
+          },
+        ];
+      },
+
+      tickerMetrics() {
+        const t = this.selectedTicker;
+        if (!t) return [];
+        return [
+          { label: 'Market Cap',    value: t.market_cap_m ? '$' + Math.round(t.market_cap_m) + 'M' : '—', color: 'text-gray-200' },
+          { label: 'Price',         value: t.price ? '$' + t.price.toFixed(2) : '—', color: 'text-gray-200' },
+          { label: 'Cash Ratio',    value: t.cash_ratio != null ? t.cash_ratio.toFixed(2) : '—', color: t.cash_ratio > 0.5 ? 'text-green-400' : 'text-yellow-400' },
+          { label: 'Cash Runway',   value: t.cash_runway_months ? Math.round(t.cash_runway_months) + ' months' : '—', color: t.cash_runway_months > 18 ? 'text-green-400' : 'text-yellow-400' },
+          { label: 'vs 52w High',   value: t.vs_52w_high_pct != null ? t.vs_52w_high_pct + '%' : '—', color: 'text-blue-400' },
+          { label: 'Risk Env',      value: t.risk_environment ?? '—', color: t.risk_environment === 'elevated' ? 'text-green-400' : 'text-gray-400' },
+        ];
+      },
+
+      buildCharts() {
+        // Categorical series colours. These are darker, more saturated steps
+        // of the interface cyan and amber: the display tints fail a dark-mode
+        // palette check — both sit above the L 0.48–0.67 band, and the cyan
+        // falls under the 0.10 chroma floor, so as a large fill it reads grey.
+        // These two pass every check against the panel surface, worst-case
+        // colour-vision separation ΔE 18.7 (protan).
+        const SERIES = { a: '#1298b4', b: '#c28219' };
+        const INK_3  = '#6d8683';
+        const RULE   = '#1e3236';
+        const PANEL  = '#132225';
+        const MONO   = 'ui-monospace, Menlo, monospace';
+
+        // Axes and gridlines stay recessive — the marks are the only thing
+        // meant to be read at a glance.
+        const GRID   = { color: RULE, drawTicks: false, lineWidth: 1 };
+        const TICK   = { color: INK_3, font: { family: MONO, size: 10 }, padding: 6 };
+        const LEGEND = { labels: { color: INK_3, boxWidth: 10, boxHeight: 10,
+                                   font: { size: 11 } } };
+
+        // Every chart gets a hover readout; a chart that cannot be
+        // interrogated is a picture of data rather than a view of it.
+        const TOOLTIP = {
+          backgroundColor: PANEL, borderColor: '#2a444a', borderWidth: 1,
+          titleColor: '#e6ece9', bodyColor: '#9ab0ad',
+          titleFont: { size: 12 }, bodyFont: { family: MONO, size: 12 },
+          padding: 8, cornerRadius: 0, boxWidth: 8, boxHeight: 8,
+        };
+
+        const lineDefaults = (label, data, color) => ({
+          label, data,
+          borderColor: color,
+          backgroundColor: color + '1f',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.25,
+          fill: true,
+        });
+
+        // 4px rounded data-ends anchored to the baseline, with a 2px surface
+        // gap so adjacent bars never fuse.
+        const barDefaults = (label, data, color) => ({
+          label, data,
+          backgroundColor: color,
+          borderRadius: 4,
+          borderSkipped: 'start',
+          borderWidth: 2,
+          borderColor: PANEL,
+          categoryPercentage: 0.8,
+          barPercentage: 0.9,
+        });
+
+        // VIX chart
+        if (this.data.macro.vix_history?.length) {
+          const h = this.data.macro.vix_history;
+          new Chart(document.getElementById('vixChart'), {
+            type: 'line',
+            data: {
+              labels: h.map(r => r.date),
+              datasets: [
+                lineDefaults('VIX', h.map(r => r.value), SERIES.b),
+                {
+                  // A reference level, not a series — dashed, unfilled, and
+                  // kept out of the legend so it cannot read as data.
+                  label: 'Elevated (25)',
+                  data: h.map(() => 25),
+                  borderColor: '#e2695f66',
+                  borderDash: [3, 3],
+                  borderWidth: 1,
+                  pointRadius: 0,
+                  fill: false,
+                }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: LEGEND, tooltip: TOOLTIP },
+              scales: {
+                x: { ticks: { ...TICK, maxTicksLimit: 6 }, grid: { ...GRID, display: false } },
+                y: { ticks: TICK, grid: GRID, suggestedMin: 10, border: { display: false } }
+              }
+            }
+          });
+        }
+
+        // Yield spread chart
+        if (this.data.macro.spread_history?.length) {
+          const h = this.data.macro.spread_history;
+          new Chart(document.getElementById('spreadChart'), {
+            type: 'line',
+            data: {
+              labels: h.map(r => r.date),
+              datasets: [
+                lineDefaults('10Y–2Y spread', h.map(r => r.value), SERIES.a),
+                {
+                  // Inversion boundary. Zero is the meaningful level here, so
+                  // it gets a rule rather than being left to the grid.
+                  label: 'Inversion (0)',
+                  data: h.map(() => 0),
+                  borderColor: '#e2695f66',
+                  borderDash: [3, 3],
+                  borderWidth: 1,
+                  pointRadius: 0,
+                  fill: false,
+                }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: LEGEND, tooltip: TOOLTIP },
+              scales: {
+                x: { ticks: { ...TICK, maxTicksLimit: 6 }, grid: { ...GRID, display: false } },
+                y: { ticks: TICK, grid: GRID, border: { display: false } }
+              }
+            }
+          });
+        }
+
+        // Equity curve chart
+        const eq = this.data.backtest.equity_curve;
+        if (eq?.length) {
+          new Chart(document.getElementById('equityChart'), {
+            type: 'line',
+            data: {
+              labels: eq.map(r => r.month),
+              datasets: [
+                { ...lineDefaults('Screener', eq.map(r => r.screener_return), SERIES.a),
+                  fill: false, borderWidth: 2 },
+                { ...lineDefaults('XBI', eq.map(r => r.xbi_return), SERIES.b),
+                  fill: false, borderWidth: 2, borderDash: [4, 3] },
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: LEGEND, tooltip: TOOLTIP },
+              scales: {
+                x: { ticks: { ...TICK, maxTicksLimit: 8 }, grid: { ...GRID, display: false } },
+                y: { ticks: TICK, grid: GRID, border: { display: false } }
+              }
+            }
+          });
+        }
+
+        // Regime bar chart
+        const reg = this.data.backtest.regime_stats;
+        if (reg?.length) {
+          new Chart(document.getElementById('regimeChart'), {
+            type: 'bar',
+            data: {
+              labels: reg.map(r => r.regime),
+              datasets: [{
+                ...barDefaults('Mean 30d return %', reg.map(r => r.mean_return), SERIES.a),
+                // Colour encodes sign only. The previous four-way threshold
+                // ramp (green/cyan/amber/red by magnitude) restated the bar
+                // length in hue and implied categories that do not exist.
+                backgroundColor: reg.map(r => r.mean_return >= 0 ? '#48b07a' : '#e2695f'),
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true, maintainAspectRatio: true,
+              plugins: { legend: { display: false }, tooltip: TOOLTIP },
+              scales: {
+                x: { ticks: TICK, grid: GRID, border: { display: false } },
+                y: { ticks: { ...TICK, font: { family: MONO, size: 9 } },
+                     grid: { display: false }, border: { display: false } }
+              }
+            }
+          });
+        }
+
+        // Price level chart
+        const pl = this.data.backtest.price_levels;
+        if (pl?.length) {
+          new Chart(document.getElementById('priceLevelChart'), {
+            type: 'bar',
+            data: {
+              labels: pl.map(p => p.bucket),
+              datasets: [
+                barDefaults('All regimes',   pl.map(p => p.mean_all),      SERIES.a),
+                barDefaults('Elevated risk', pl.map(p => p.mean_elevated), SERIES.b),
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: true,
+              plugins: { legend: LEGEND, tooltip: TOOLTIP },
+              scales: {
+                x: { ticks: { ...TICK, font: { family: MONO, size: 9 } },
+                     grid: { display: false }, border: { display: false } },
+                y: { ticks: TICK, grid: GRID, border: { display: false } }
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+  </script>
+
+</body>
+</html>

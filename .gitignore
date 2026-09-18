@@ -1,0 +1,23 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.db
+*.sqlite
+.vscode/
+*.log
+logs/
+db/
+
+# macOS
+.DS_Store
+
+# Scratch / debug scripts
+debug_form4.py
+test_sec.py

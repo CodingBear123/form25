@@ -1,0 +1,241 @@
+{
+  "start_date": "2019-06-14",
+  "end_date": "2026-09-18",
+  "n_tickers": 189,
+  "n_trading_days": 1826,
+  "portfolio": "value",
+  "permutation_tests": [
+    {
+      "hold_days": 30,
+      "observed_mean": 2.263,
+      "null_mean": 1.679,
+      "null_std": 0.111,
+      "effect_size": 5.262,
+      "p_value": 0.0,
+      "ci_lower_95": 1.464,
+      "ci_upper_95": 1.895,
+      "n_permutations": 10000,
+      "n_observations": 61907,
+      "n_dates": 1807,
+      "avg_selections_per_day": 34.3,
+      "significant": true,
+      "interpretation": "Screener outperforms random selection at 30d hold: mean=+2.26% vs null=+1.68% (effect=+5.26\u03c3, p=0.0000, highly significant)"
+    },
+    {
+      "hold_days": 60,
+      "observed_mean": 4.141,
+      "null_mean": 3.35,
+      "null_std": 0.162,
+      "effect_size": 4.891,
+      "p_value": 0.0,
+      "ci_lower_95": 3.033,
+      "ci_upper_95": 3.668,
+      "n_permutations": 10000,
+      "n_observations": 60889,
+      "n_dates": 1787,
+      "avg_selections_per_day": 34.1,
+      "significant": true,
+      "interpretation": "Screener outperforms random selection at 60d hold: mean=+4.14% vs null=+3.35% (effect=+4.89\u03c3, p=0.0000, highly significant)"
+    },
+    {
+      "hold_days": 90,
+      "observed_mean": 5.822,
+      "null_mean": 5.009,
+      "null_std": 0.19,
+      "effect_size": 4.276,
+      "p_value": 0.0,
+      "ci_lower_95": 4.644,
+      "ci_upper_95": 5.38,
+      "n_permutations": 10000,
+      "n_observations": 59848,
+      "n_dates": 1766,
+      "avg_selections_per_day": 33.9,
+      "significant": true,
+      "interpretation": "Screener outperforms random selection at 90d hold: mean=+5.82% vs null=+5.01% (effect=+4.28\u03c3, p=0.0000, highly significant)"
+    }
+  ],
+  "benchmark_returns": {
+    "SPY": {
+      "30d": 1.34,
+      "60d": 2.69,
+      "90d": 4.09
+    },
+    "XBI": {
+      "30d": 1.11,
+      "60d": 2.26,
+      "90d": 3.55
+    }
+  },
+  "screener_vs_spy": {
+    "30d": 0.92,
+    "60d": 1.45,
+    "90d": 1.73
+  },
+  "screener_vs_xbi": {
+    "30d": 1.15,
+    "60d": 1.88,
+    "90d": 2.27
+  },
+  "score_buckets": [
+    {
+      "bucket": "0-20",
+      "n": 1901,
+      "mean_return": 3.43,
+      "median_return": -0.88,
+      "win_rate": 0.472,
+      "std": 25.77
+    },
+    {
+      "bucket": "20-30",
+      "n": 15280,
+      "mean_return": 1.52,
+      "median_return": -1.69,
+      "win_rate": 0.456,
+      "std": 25.08
+    },
+    {
+      "bucket": "30-40",
+      "n": 25198,
+      "mean_return": 1.92,
+      "median_return": -1.38,
+      "win_rate": 0.464,
+      "std": 25.43
+    },
+    {
+      "bucket": "40-55",
+      "n": 17421,
+      "mean_return": 3.51,
+      "median_return": -0.78,
+      "win_rate": 0.481,
+      "std": 29.09
+    },
+    {
+      "bucket": "55+",
+      "n": 2107,
+      "mean_return": 0.39,
+      "median_return": -2.63,
+      "win_rate": 0.44,
+      "std": 25.01
+    }
+  ],
+  "score_correlation": 0.0079,
+  "score_corr_pvalue": 0.0479,
+  "macro_regime_stats": [
+    {
+      "regime": "risk: elevated",
+      "n": 10942,
+      "mean_return": 6.7,
+      "win_rate": 0.548,
+      "vs_all_mean": 4.44
+    },
+    {
+      "regime": "neutral / inverted curve",
+      "n": 269,
+      "mean_return": 4.59,
+      "win_rate": 0.599,
+      "vs_all_mean": 2.33
+    },
+    {
+      "regime": "restrictive / flat curve",
+      "n": 11806,
+      "mean_return": 3.49,
+      "win_rate": 0.474,
+      "vs_all_mean": 1.23
+    },
+    {
+      "regime": "restrictive / inverted curve",
+      "n": 19421,
+      "mean_return": 2.86,
+      "win_rate": 0.471,
+      "vs_all_mean": 0.6
+    },
+    {
+      "regime": "neutral / flat curve",
+      "n": 1425,
+      "mean_return": 2.48,
+      "win_rate": 0.506,
+      "vs_all_mean": 0.22
+    },
+    {
+      "regime": "risk: moderate",
+      "n": 41264,
+      "mean_return": 1.7,
+      "win_rate": 0.458,
+      "vs_all_mean": -0.56
+    },
+    {
+      "regime": "neutral / normal curve",
+      "n": 2608,
+      "mean_return": 1.44,
+      "win_rate": 0.469,
+      "vs_all_mean": -0.82
+    },
+    {
+      "regime": "restrictive / normal curve",
+      "n": 7479,
+      "mean_return": 1.4,
+      "win_rate": 0.476,
+      "vs_all_mean": -0.86
+    },
+    {
+      "regime": "accommodative / normal curve",
+      "n": 17911,
+      "mean_return": 1.39,
+      "win_rate": 0.448,
+      "vs_all_mean": -0.87
+    },
+    {
+      "regime": "risk: low",
+      "n": 9701,
+      "mean_return": -0.36,
+      "win_rate": 0.409,
+      "vs_all_mean": -2.62
+    },
+    {
+      "regime": "accommodative / flat curve",
+      "n": 976,
+      "mean_return": -0.63,
+      "win_rate": 0.44,
+      "vs_all_mean": -2.89
+    },
+    {
+      "regime": "accommodative / inverted curve",
+      "n": 12,
+      "mean_return": -6.29,
+      "win_rate": 0.333,
+      "vs_all_mean": -8.56
+    }
+  ],
+  "sharpe_ratio": {
+    "30d": 0.189,
+    "60d": 0.162,
+    "90d": 0.151
+  },
+  "max_drawdown": {
+    "30d": -100.0,
+    "60d": -100.0,
+    "90d": -100.0
+  },
+  "win_rates": {
+    "30d": 46.6,
+    "60d": 45.8,
+    "90d": 45.6
+  },
+  "avg_returns": {
+    "30d": 2.26,
+    "60d": 4.14,
+    "90d": 5.82
+  },
+  "median_returns": {
+    "30d": -1.33,
+    "60d": -2.57,
+    "90d": -3.48
+  },
+  "failed_filter_returns": {
+    "30d": 1.45,
+    "60d": 2.9,
+    "90d": 4.45
+  },
+  "overall_significant": true,
+  "summary": "SIGNIFICANT: Screener outperforms random selection in 3/3 hold periods. Best: 30d mean=+2.26% (p=0.0000, effect=+5.26\u03c3)."
+}
