@@ -44,7 +44,7 @@ sign.
 The correction sits inside the same panel as the significance test on purpose:
 a caveat on its own tab is a caveat nobody reads.
 
-**[Open the dashboard →](https://spongebob959.github.io/form25/)**
+**[Open the dashboard →](https://CodingBear123.github.io/form25/)**
 
 ---
 
